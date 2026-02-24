@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChronoMind AI — Trợ lý thời gian thông minh</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #090e1a;
+      --surface: #0f1628;
+      --surface2: #162035;
+      --border: #1e2d4a;
+      --accent: #00d4ff;
+      --accent2: #7b5ea7;
+      --accent3: #00ffaa;
+      --text: #e8f0ff;
+      --text-dim: #7a8aaa;
+      --user-bubble: #162545;
+      --ai-bubble: #0f1e38;
+      --glow: 0 0 30px rgba(0,212,255,0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Sora', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0,212,255,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(123,94,167,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 60% 30%, rgba(0,255,170,0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grid lines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* HEADER */
+    .header {
+      position: relative;
+      z-index: 10;
+      padding: 14px 24px;
+      background: rgba(9,14,26,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-ring {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px rgba(0,212,255,0.3);
+      flex-shrink: 0;
+      animation: pulse-logo 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-logo {
+      0%, 100% { box-shadow: 0 0 20px rgba(0,212,255,0.3); }
+      50% { box-shadow: 0 0 35px rgba(0,212,255,0.55); }
+    }
+
+    .header-info { flex: 1; }
+    .header-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 1px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent3);
+      box-shadow: 0 0 8px var(--accent3);
+      animation: blink 2s ease-in-out infinite;
+      margin-right: 4px;
+      display: inline-block;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* API KEY BAR */
+    .api-bar {
+      position: relative;
+      z-index: 10;
+      padding: 8px 16px;
+      background: rgba(15,22,40,0.9);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .api-bar label {
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      font-size: 11px;
+    }
+
+    .api-key-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .api-key-input:focus { border-color: var(--accent); }
+    .api-key-input::placeholder { color: var(--text-dim); }
+
+    .demo-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(0,255,170,0.12);
+      color: var(--accent3);
+      border: 1px solid rgba(0,255,170,0.25);
+      white-space: nowrap;
+      cursor: default;
+    }
+
+    /* CHAT AREA */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      position: relative;
+      z-index: 5;
+      scroll-behavior: smooth;
+    }
+
+    .chat-area::-webkit-scrollbar { width: 4px; }
+    .chat-area::-webkit-scrollbar-track { background: transparent; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .message {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      animation: msg-in 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      opacity: 0;
+    }
+
+    @keyframes msg-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      align-self: flex-end;
+    }
+
+    .avatar.ai {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 12px rgba(0,212,255,0.25);
+    }
+
+    .avatar.user {
+      background: linear-gradient(135deg, #2a3a5c, #3a4d7a);
+    }
+
+    .bubble {
+      max-width: min(75%, 560px);
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.65;
+      position: relative;
+    }
+
+    .bubble.ai {
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .bubble.user {
+      background: var(--user-bubble);
+      border: 1px solid rgba(0,212,255,0.15);
+      border-bottom-right-radius: 4px;
+      text-align: right;
+    }
+
+    .bubble strong { color: var(--accent); font-weight: 600; }
+    .bubble em { color: var(--accent3); font-style: normal; font-weight: 500; }
+
+    .bubble .schedule-block {
+      margin-top: 10px;
+      background: rgba(0,212,255,0.06);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .schedule-row {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(0,212,255,0.08);
+      font-size: 13px;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+
+    .schedule-row:last-child { border-bottom: none; }
+    .schedule-row:hover { background: rgba(0,212,255,0.06); }
+
+    .schedule-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      font-size: 12px;
+      min-width: 52px;
+      font-weight: 600;
+    }
+
+    .schedule-task { flex: 1; color: var(--text); }
+    .schedule-icon { font-size: 16px; }
+
+    /* Quick suggestions */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .suggestion-btn {
+      padding: 7px 14px;
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 20px;
+      color: var(--accent);
+      font-size: 12px;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .suggestion-btn:hover {
+      background: rgba(0,212,255,0.18);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 14px 16px;
+    }
+
+    .typing-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: typing 1.2s ease-in-out infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* INPUT AREA */
+    .input-area {
+      position: relative;
+      z-index: 10;
+      padding: 12px 16px 16px;
+      background: rgba(9,14,26,0.9);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-row:focus-within {
+      border-color: rgba(0,212,255,0.4);
+      box-shadow: 0 0 20px rgba(0,212,255,0.08);
+    }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      resize: none;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+
+    #user-input::placeholder { color: var(--text-dim); }
+
+    .send-btn {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      box-shadow: 0 0 15px rgba(0,212,255,0.25);
+    }
+
+    .send-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 25px rgba(0,212,255,0.45);
+    }
+
+    .send-btn:active { transform: scale(0.95); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .input-hint {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Welcome screen */
+    .welcome {
+      text-align: center;
+      padding: 40px 20px;
+      animation: msg-in 0.5s ease forwards;
+    }
+
+    .welcome-icon {
+      font-size: 52px;
+      display: block;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 0 20px rgba(0,212,255,0.5));
+    }
+
+    .welcome h2 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .welcome p {
+      color: var(--text-dim);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 380px;
+      margin: 0 auto 24px;
+    }
+
+    .quick-starts {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .qs-btn {
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .qs-btn:hover {
+      border-color: rgba(0,212,255,0.35);
+      background: rgba(0,212,255,0.06);
+      transform: translateX(4px);
+    }
+
+    .qs-icon { font-size: 18px; }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .header { padding: 12px 14px; }
+      .bubble { max-width: 88%; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo-ring">⏱️</div>
+  <div class="header-info">
+    <div class="header-title">ChronoMind AI</div>
+    <div class="header-sub"><span class="status-dot"></span>Trợ lý thời gian cá nhân hóa · AI 9.0</div>
+  </div>
+  <div class="demo-badge">✦ DEMO</div>
+</div>
+
+<!-- API KEY BAR -->
+<div class="api-bar">
+  <label>🔑 OpenAI API Key:</label>
+  <input class="api-key-input" type="password" id="api-key" placeholder="sk-... (để trống dùng chế độ Demo thông minh)" />
+</div>
+
+<!-- CHAT AREA -->
+<div class="chat-area" id="chat-area">
+  <!-- Welcome screen -->
+  <div class="welcome" id="welcome-screen">
+    <span class="welcome-icon">🧠</span>
+    <h2>Chào mừng đến với ChronoMind AI</h2>
+    <p>Tôi sẽ giúp bạn xây dựng thời gian biểu cá nhân hóa, thông minh — để bạn không bao giờ đi trễ nữa.</p>
+    <div class="quick-starts">
+      <button class="qs-btn" onclick="quickStart(this)">
+        <span class="qs-icon">📅</span>
+        Tôi muốn tạo thời gian biểu cho ngày mai
+      </button>
+      <button class="qs-btn" onclick="quickStart(this)">
+        <span class="qs-icon">⏰</span>
+        Hôm nay tôi hay đi trễ, giúp tôi cải thiện
+      </button>
+      <button class="qs-btn" onclick="quickStart(this)">
+        <span class="qs-icon">🎓</span>
+        Sắp xếp lịch học và nghỉ ngơi hợp lý
+      </button>
+      <button class="qs-btn" onclick="quickStart(this)">
+        <span class="qs-icon">💼</span>
+        Cân bằng lịch làm việc và cuộc sống
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- INPUT AREA -->
+<div class="input-area">
+  <div class="input-row">
+    <textarea id="user-input" rows="1" placeholder="Nhập hoạt động của bạn... (VD: Học lúc 7h, học thêm 3h chiều, ôn thi tối 2 tiếng)" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+  <div class="input-hint">Enter để gửi · Shift+Enter xuống dòng · Nhập API key để dùng AI thật</div>
+</div>
+
+<script>
+  const chatArea = document.getElementById('chat-area');
+  const userInput = document.getElementById('user-input');
+  const sendBtn = document.getElementById('send-btn');
+  const welcomeScreen = document.getElementById('welcome-screen');
+
+  let conversationHistory = [];
+  let isProcessing = false;
+
+  // ═══════════════════════════════════════════════════
+  //  STATE MACHINE — Thu thập thông tin từng bước
+  // ═══════════════════════════════════════════════════
+  const STATE = {
+    IDLE: 'idle',           // Chưa bắt đầu
+    Q_ROLE: 'q_role',       // Hỏi: học sinh / đi làm / khác
+    Q_ARRIVE: 'q_arrive',   // Hỏi: cần có mặt lúc mấy giờ
+    Q_TRAVEL: 'q_travel',   // Hỏi: thời gian di chuyển
+    Q_MORNING: 'q_morning', // Hỏi: thói quen buổi sáng
+    Q_EVENING: 'q_evening', // Hỏi: hoạt động buổi tối
+    Q_WAKE: 'q_wake',       // Hỏi: muốn thức dậy lúc mấy giờ
+    READY: 'ready',         // Đủ thông tin → tạo lịch
+    DONE: 'done'            // Đã tạo lịch xong
+  };
+
+  let state = STATE.IDLE;
+
+  // Dữ liệu người dùng thu thập dần
+  let userProfile = {
+    role: null,       // 'student' | 'worker' | 'other'
+    arriveTime: null, // VD: '07:00'
+    travelMins: null, // VD: 20
+    morningHabits: null,
+    eveningActivities: null,
+    wakeTime: null
+  };
+
+  // ═══════════════════════════════════════════════════
+  //  TOPIC GUARD — Từ chối câu hỏi ngoài phạm vi
+  // ═══════════════════════════════════════════════════
+  const OFF_TOPIC_PATTERNS = [
+    /nấu ăn|công thức|recipe|món/i,
+    /thể thao|bóng đá|bóng rổ|tennis/i,
+    /âm nhạc|bài hát|ca sĩ|nhạc/i,
+    /phim|series|netflix|youtube/i,
+    /lịch sử|địa lý|toán|vật lý|hóa học|sinh học/i,
+    /thời tiết|nhiệt độ|mưa|nắng/i,
+    /chính trị|bầu cử|chính phủ/i,
+    /đầu tư|chứng khoán|bitcoin|crypto/i,
+    /tình yêu|người yêu|hẹn hò|crush/i,
+    /trò chơi|game|minecraft|pubg/i,
+    /y tế|bệnh|thuốc|triệu chứng/i,
+    /code|lập trình|javascript|python/i,
+    /mua sắm|giá|sản phẩm/i,
+    /du lịch|khách sạn|vé máy bay/i,
+  ];
+
+  const TIME_RELATED = [
+    /thời gian biểu|lịch|schedule|kế hoạch/i,
+    /đi trễ|đúng giờ|muộn|sớm/i,
+    /thức dậy|ngủ|nghỉ ngơi/i,
+    /học|làm việc|công việc|trường/i,
+    /quản lý thời gian|năng suất|hiệu quả/i,
+    /ăn sáng|ăn trưa|ăn tối|di chuyển/i,
+    /thói quen|routine|habit/i,
+    /cải thiện|tốt hơn|giúp tôi/i,
+    /xin chào|hello|hi|chào/i,
+    /bạn là|bạn có thể|giới thiệu/i,
+  ];
+
+  function isOffTopic(text) {
+    const hasTimeTopic = TIME_RELATED.some(p => p.test(text));
+    const hasOffTopic = OFF_TOPIC_PATTERNS.some(p => p.test(text));
+    if (hasTimeTopic) return false;  // Chắc chắn đúng chủ đề
+    if (hasOffTopic) return true;    // Chắc chắn ngoài phạm vi
+    return false;                    // Mặc định cho phép
+  }
+
+  function refuseOffTopic(text) {
+    const topic = OFF_TOPIC_PATTERNS.find(p => p.test(text));
+    return `⛔ Xin lỗi, tôi chỉ có thể hỗ trợ về **quản lý thời gian và lập lịch trình cá nhân** — đó là lĩnh vực chuyên môn duy nhất của tôi.
+
+Câu hỏi của bạn có vẻ nằm ngoài phạm vi đó. Tôi không thể giúp về chủ đề này.
+
+💡 Thay vào đó, tôi có thể giúp bạn:
+- ✅ Tạo thời gian biểu cá nhân hóa
+- ✅ Lên kế hoạch để không đi trễ
+- ✅ Sắp xếp lịch học / làm việc hợp lý
+- ✅ Cân bằng thời gian nghỉ ngơi và năng suất
+
+Bạn có muốn bắt đầu tạo lịch trình không? 📅`;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  VALIDATION — Kiểm tra thông tin đầu vào
+  // ═══════════════════════════════════════════════════
+  function extractTime(text) {
+    // Hỗ trợ: "7h", "7:00", "7 giờ", "07:30", "7h30"
+    const m = text.match(/(\d{1,2})[h:]\s*(\d{0,2})/i) || text.match(/(\d{1,2})\s*giờ\s*(\d{0,2})/i);
+    if (!m) return null;
+    const h = parseInt(m[1]);
+    const min = parseInt(m[2] || '0') || 0;
+    if (h < 0 || h > 23 || min > 59) return null;
+    return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+  }
+
+  function extractMinutes(text) {
+    const m = text.match(/(\d+)\s*(phút|phut|ph|min|p\b)/i);
+    if (m) return parseInt(m[1]);
+    const h = text.match(/(\d+)\s*(tiếng|tieng|giờ|gio|h\b)/i);
+    if (h) return parseInt(h[1]) * 60;
+    const n = text.match(/^(\d+)$/);
+    if (n) {
+      const v = parseInt(n[1]);
+      return v <= 5 ? v * 60 : v; // ≤5 → coi là giờ, >5 → phút
+    }
+    return null;
+  }
+
+  function extractRole(text) {
+    const t = text.toLowerCase();
+    if (/học sinh|sinh viên|học|school|student/.test(t)) return 'student';
+    if (/đi làm|nhân viên|công ty|văn phòng|worker|work/.test(t)) return 'worker';
+    if (/khác|other|tự do|freelance/.test(t)) return 'other';
+    return null;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  STATE MACHINE LOGIC — Hỏi từng bước
+  // ═══════════════════════════════════════════════════
+  function processState(text) {
+    switch (state) {
+
+      case STATE.IDLE: {
+        // Bắt đầu → hỏi vai trò
+        state = STATE.Q_ROLE;
+        return `Chào mừng bạn đến với **ChronoMind AI**! 🧠⏱️
+
+Để tạo thời gian biểu **cá nhân hóa chính xác** cho bạn, tôi cần thu thập một số thông tin.
+
+📋 **Câu hỏi 1/5:** Bạn thuộc nhóm nào?
+- 🎓 **Học sinh / Sinh viên**
+- 💼 **Đi làm / Nhân viên văn phòng**
+- 🔧 **Khác (freelance, tự do...)**
+
+Hãy trả lời để tôi có thể cá nhân hóa lịch cho bạn!`;
+      }
+
+      case STATE.Q_ROLE: {
+        const role = extractRole(text);
+        if (!role) {
+          return `⚠️ Tôi chưa hiểu rõ bạn thuộc nhóm nào. Bạn có thể chọn một trong các đáp án sau không?
+
+- 🎓 **"Học sinh"** hoặc **"Sinh viên"**
+- 💼 **"Đi làm"** hoặc **"Nhân viên"**
+- 🔧 **"Khác"**`;
+        }
+        userProfile.role = role;
+        state = STATE.Q_ARRIVE;
+        const roleLabel = role === 'student' ? 'trường học' : role === 'worker' ? 'cơ quan' : 'nơi làm việc';
+        return `✅ Đã ghi nhận! 
+
+📋 **Câu hỏi 2/5:** Bạn cần có mặt tại **${roleLabel}** lúc mấy giờ?
+
+*(Ví dụ: "7 giờ sáng", "7h30", "8:00")*`;
+      }
+
+      case STATE.Q_ARRIVE: {
+        const time = extractTime(text);
+        if (!time) {
+          return `⚠️ Tôi chưa đọc được giờ bạn nhập. Bạn thử viết theo dạng:
+
+- **"7h"** hoặc **"7:00"**
+- **"7h30"** hoặc **"07:30"**
+- **"8 giờ sáng"**
+
+Bạn cần có mặt lúc mấy giờ?`;
+        }
+        userProfile.arriveTime = time;
+        state = STATE.Q_TRAVEL;
+        return `✅ Ghi nhận giờ có mặt: **${time}**
+
+📋 **Câu hỏi 3/5:** Từ nhà đến đó mất bao lâu để di chuyển?
+
+*(Ví dụ: "15 phút", "30 phút", "1 tiếng")*`;
+      }
+
+      case STATE.Q_TRAVEL: {
+        const mins = extractMinutes(text);
+        if (!mins || mins <= 0 || mins > 300) {
+          return `⚠️ Tôi chưa hiểu thời gian di chuyển bạn nhập. Hãy thử:
+
+- **"15 phút"** hoặc **"15p"**
+- **"30 phút"**
+- **"1 tiếng"**
+
+Từ nhà đến nơi cần đến mất bao lâu?`;
+        }
+        userProfile.travelMins = mins;
+        state = STATE.Q_MORNING;
+        return `✅ Di chuyển: **${mins} phút**
+
+📋 **Câu hỏi 4/5:** Buổi sáng bạn thường làm gì trước khi đi? (tắm, ăn sáng, tập thể dục...)
+
+*(Ví dụ: "Tắm 10 phút, ăn sáng 15 phút" — càng chi tiết tôi lên lịch càng chính xác!)*`;
+      }
+
+      case STATE.Q_MORNING: {
+        if (text.length < 5) {
+          return `⚠️ Bạn có thể mô tả chi tiết hơn một chút không? Ví dụ:
+
+- **"Tắm 15 phút, ăn sáng 20 phút"**
+- **"Chỉ uống sữa rồi đi, khoảng 10 phút"**
+- **"Tắm, ăn sáng, thay đồ — tổng 30 phút"**
+
+Thói quen buổi sáng của bạn như thế nào?`;
+        }
+        userProfile.morningHabits = text;
+        state = STATE.Q_EVENING;
+        return `✅ Đã ghi nhận thói quen sáng!
+
+📋 **Câu hỏi 5/5 (câu cuối!):** Buổi tối bạn có hoạt động gì cố định không?
+
+*(Ví dụ: "Học thêm tiếng Anh 7h tối", "Tập gym 6h", "Không có gì đặc biệt")*`;
+      }
+
+      case STATE.Q_EVENING: {
+        userProfile.eveningActivities = text;
+        state = STATE.READY;
+        // Tạo lịch ngay!
+        return generateSchedule();
+      }
+
+      case STATE.DONE: {
+        // Sau khi lịch xong → cho phép hỏi thêm về thời gian biểu
+        return handlePostSchedule(text);
+      }
+
+      default:
+        return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  TẠO LỊCH DỰA TRÊN THÔNG TIN ĐÃ THU THẬP
+  // ═══════════════════════════════════════════════════
+  function generateSchedule() {
+    state = STATE.DONE;
+    const { role, arriveTime, travelMins, morningHabits, eveningActivities } = userProfile;
+
+    // Tính giờ thức dậy
+    const [ah, am] = arriveTime.split(':').map(Number);
+    const arriveTotal = ah * 60 + am;
+
+    // Ước tính thời gian chuẩn bị buổi sáng từ mô tả
+    let prepMins = 30; // mặc định
+    if (/tắm|shower/.test(morningHabits)) prepMins += 15;
+    if (/ăn sáng|breakfast/.test(morningHabits)) prepMins += 15;
+    if (/tập|gym|thể dục/.test(morningHabits)) prepMins += 30;
+    if (/\d+\s*phút/.test(morningHabits)) {
+      const m = morningHabits.match(/(\d+)\s*phút/g);
+      if (m) prepMins = m.reduce((s, x) => s + parseInt(x), 0);
+    }
+
+    const bufferMins = 10; // thêm 10 phút đệm để không đi trễ
+    const wakeTotal = arriveTotal - travelMins - prepMins - bufferMins;
+    const wakeH = Math.floor(wakeTotal / 60);
+    const wakeM = wakeTotal % 60;
+    const wakeTime = `${String(wakeH).padStart(2,'0')}:${String(wakeM).padStart(2,'0')}`;
+
+    const fmt = (h, m) => `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const addMin = (baseH, baseM, add) => {
+      const total = baseH * 60 + baseM + add;
+      return [Math.floor(total / 60) % 24, total % 60];
+    };
+
+    let [ch, cm] = [wakeH, wakeM];
+    const slots = [];
+    const push = (icon, label, dur) => {
+      slots.push({ time: fmt(ch, cm), icon, label });
+      [ch, cm] = addMin(ch, cm, dur);
+    };
+
+    // Sáng
+    push('🌅', 'Thức dậy — uống nước, vươn vai nhẹ', 5);
+
+    if (/tập|gym|thể dục/.test(morningHabits)) push('💪', 'Tập thể dục buổi sáng', 30);
+    if (/tắm/.test(morningHabits)) push('🚿', 'Tắm rửa & vệ sinh cá nhân', 15);
+    else push('🚿', 'Vệ sinh cá nhân & thay đồ', 10);
+
+    if (/ăn sáng|breakfast/.test(morningHabits) || !/không ăn|skip/.test(morningHabits))
+      push('🍳', 'Ăn sáng — đừng bỏ bữa!', 15);
+
+    push('🎒', `Chuẩn bị đồ dùng & khởi hành (đệm ${bufferMins} phút)`, travelMins + bufferMins);
+    push('📍', `Có mặt tại ${role === 'student' ? 'trường' : 'cơ quan'} — đúng giờ! ✅`, 0);
+
+    // Reset mốc giờ dựa trên giờ đến
+    [ch, cm] = [ah, am];
+
+    // Giữa ngày
+    if (role === 'student') {
+      [ch, cm] = addMin(ah, am, 270); // +4.5h
+      push('🍱', 'Ăn trưa + nghỉ trưa 20 phút', 60);
+      push('📖', 'Tự học / ôn bài buổi chiều', 120);
+    } else {
+      [ch, cm] = addMin(ah, am, 120); // +2h
+      push('☕', 'Nghỉ giải lao ngắn (10 phút)', 10);
+      [ch, cm] = addMin(ch, cm, 110);
+      push('🍱', 'Ăn trưa + đi bộ nhẹ', 60);
+      push('💼', 'Làm việc buổi chiều — deep work', 180);
+    }
+
+    // Tối — dựa trên eveningActivities
+    const hasGym = /gym|thể dục|chạy|bơi|tập/.test(eveningActivities);
+    const hasStudy = /học|ôn|bài tập|tiếng anh|toán/.test(eveningActivities);
+    const hasFree = /không|tự do|nghỉ|tivi/.test(eveningActivities);
+
+    if (role === 'student') [ch, cm] = [17, 30];
+    else [ch, cm] = [17, 30];
+
+    push('🏠', 'Về nhà & nghỉ ngơi ngắn', 30);
+    if (hasGym) push('💪', 'Tập thể dục / thể thao', 45);
+    push('🍽️', 'Ăn tối cùng gia đình', 30);
+
+    if (hasStudy) {
+      push('📚', 'Học thêm / ôn thi theo lịch', 90);
+      push('☕', 'Nghỉ giải lao 10 phút', 10);
+      push('📖', 'Xem lại bài & chuẩn bị ngày mai', 30);
+    } else if (hasFree) {
+      push('📱', 'Thời gian cá nhân / giải trí', 60);
+      push('📋', 'Lên kế hoạch ngày mai (5 phút)', 5);
+    } else {
+      push('📝', eveningActivities.slice(0, 40) || 'Hoạt động buổi tối', 60);
+      push('📋', 'Chuẩn bị đồ dùng cho ngày mai', 10);
+    }
+
+    push('📵', 'Tắt màn hình — digital detox', 30);
+    push('🌙', 'Đi ngủ — ngủ đủ 7-8 tiếng', 0);
+
+    const scheduleText = slots.map(s => `${s.time} | ${s.icon} | ${s.label}`).join('\n');
+
+    const roleEmoji = role === 'student' ? '🎓' : '💼';
+
+    return `${roleEmoji} **Thời gian biểu cá nhân hóa của bạn đã sẵn sàng!**
+
+Dựa trên thông tin bạn cung cấp, tôi đã tính toán:
+- 🕐 Giờ cần có mặt: **${arriveTime}**
+- 🚌 Di chuyển: **${travelMins} phút**
+- ⏰ Thức dậy lý tưởng: **${wakeTime}** *(có đệm ${bufferMins} phút dự phòng)*
+
+[SCHEDULE]
+${scheduleText}
+[/SCHEDULE]
+
+💡 **3 lời khuyên quan trọng:**
+- **Chuẩn bị đồ dùng từ tối hôm trước** — tiết kiệm 10-15 phút mỗi sáng
+- **Đặt 2 báo thức**: một lúc ${wakeTime}, một lúc ${fmt(...addMin(wakeH, wakeM, 10))} để đảm bảo
+- **Kiên trì 21 ngày** — đây là thời gian cần thiết để hình thành thói quen mới
+
+---
+Bạn muốn **điều chỉnh lịch này** hay có thắc mắc gì về thời gian biểu không? 🙋`;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  SAU KHI TẠO LỊCH — Xử lý câu hỏi follow-up
+  // ═══════════════════════════════════════════════════
+  function handlePostSchedule(text) {
+    const t = text.toLowerCase();
+
+    if (/tạo lại|làm lại|bắt đầu lại|reset/.test(t)) {
+      state = STATE.IDLE;
+      userProfile = { role: null, arriveTime: null, travelMins: null, morningHabits: null, eveningActivities: null, wakeTime: null };
+      return processState(text);
+    }
+
+    if (/sớm hơn|dậy sớm/.test(t)) {
+      return `💡 Để thức dậy sớm hơn hiệu quả:
+
+- **Ngủ sớm dần 15 phút mỗi ngày** — không thay đổi đột ngột
+- **Để điện thoại xa giường** — buộc bạn phải đứng dậy tắt chuông
+- **Ánh sáng tự nhiên**: mở rèm cửa ngay khi thức — não sẽ tỉnh táo nhanh hơn
+- **Chuẩn bị thứ bạn thích vào buổi sáng** (cà phê, bài nhạc yêu thích)
+
+Bạn muốn tôi điều chỉnh giờ thức dậy trong lịch không?`;
+    }
+
+    if (/trễ|muộn|không kịp/.test(t)) {
+      return `⏰ Mẹo chống đi trễ hiệu quả nhất:
+
+- **Quy tắc 10 phút sớm**: luôn đặt mục tiêu đến sớm hơn 10 phút
+- **Chuẩn bị tối qua**: quần áo, cặp sách, tài liệu — sẵn sàng 100% từ đêm hôm trước
+- **Theo dõi thời gian thực**: dùng đồng hồ bấm giờ cho từng bước buổi sáng để biết thật sự mất bao lâu
+- **Giảm quyết định buổi sáng**: ăn sáng cố định, quần áo cố định → não không tốn năng lượng
+
+Bạn có muốn tôi tạo lại lịch với thêm thời gian đệm không?`;
+    }
+
+    if (/nghỉ|nghỉ ngơi|mệt|căng thẳng|stress/.test(t)) {
+      return `😌 Nghỉ ngơi đúng cách trong lịch trình:
+
+- **Kỹ thuật Pomodoro**: làm 25 phút → nghỉ 5 phút → lặp 4 lần → nghỉ dài 20 phút
+- **Giới hạn màn hình trước ngủ**: tối thiểu 45 phút không dùng điện thoại
+- **Giấc ngủ 20 phút buổi trưa** (power nap) tăng hiệu suất chiều đáng kể
+- **Đừng bỏ qua cuối tuần**: cơ thể cần phục hồi — lên lịch thư giãn cũng quan trọng như lịch học/làm
+
+Muốn tôi thêm các mốc nghỉ ngơi vào lịch của bạn?`;
+    }
+
+    if (/cảm ơn|tốt|hay|oke|ok|tuyệt/.test(t)) {
+      return `Cảm ơn bạn! 🌟 Chúc bạn thực hiện thời gian biểu thành công!
+
+Nếu sau vài ngày bạn thấy cần điều chỉnh, hãy nhắn **"tạo lại"** để tôi lên lịch mới cho bạn nhé! 💪`;
+    }
+
+    // Mặc định khi hỏi không rõ sau khi đã xong
+    return `Tôi có thể giúp bạn thêm về:
+- 📝 **"Tạo lại"** — làm thời gian biểu mới
+- ⏰ **"Mẹo chống đi trễ"** — tips thực tế
+- 😴 **"Nghỉ ngơi"** — cách phục hồi năng lượng
+- 🌅 **"Dậy sớm hơn"** — cách điều chỉnh giờ thức
+
+Bạn muốn hỏi về điều nào?`;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  SYSTEM PROMPT (cho OpenAI API)
+  // ═══════════════════════════════════════════════════
+  const SYSTEM_PROMPT = `Bạn là ChronoMind AI — trợ lý CHUYÊN BIỆT về quản lý thời gian và lập lịch trình cá nhân.
+
+PHẠM VI: Chỉ trả lời các câu hỏi liên quan đến: thời gian biểu, quản lý thời gian, thói quen buổi sáng/tối, chống đi trễ, năng suất học tập/làm việc, cân bằng nghỉ ngơi.
+
+TỪ CHỐI: Nếu người dùng hỏi về bất kỳ chủ đề nào KHÁC (nấu ăn, thể thao, âm nhạc, phim ảnh, lập trình, y tế, tài chính, tình yêu, trò chơi...) → lịch sự từ chối và hướng về chủ đề thời gian biểu.
+
+QUY TRÌNH BẮT BUỘC — trước khi tạo lịch, PHẢI hỏi đủ 5 thông tin:
+1. Vai trò: học sinh / đi làm / khác
+2. Giờ cần có mặt tại trường/cơ quan
+3. Thời gian di chuyển (phút)
+4. Thói quen buổi sáng (tắm, ăn sáng, thể dục...)
+5. Hoạt động buổi tối cố định
+
+NẾU THIẾU THÔNG TIN: Không tạo lịch ngay. Hỏi lại câu thiếu, giải thích tại sao cần.
+NẾU THÔNG TIN SAI ĐỊNH DẠNG: Yêu cầu nhập lại với ví dụ cụ thể.
+
+KHI TẠO LỊCH: Dùng format bắt buộc:
+[SCHEDULE]
+HH:MM | icon | Tên hoạt động
+[/SCHEDULE]
+
+Icons: 🌅🍳🚿🚌📚☕🍱💪📖🌙💼🍽️📋📵🎒📍
+
+SAU KHI TẠO LỊCH: Đưa ra 3 lời khuyên cụ thể. Cho phép hỏi follow-up về điều chỉnh lịch.
+Trả lời bằng tiếng Việt, thân thiện, ngắn gọn, có chiều sâu.`;
+
+  // ═══════════════════════════════════════════════════
+  //  UI FUNCTIONS
+  // ═══════════════════════════════════════════════════
+  function parseSchedule(text) {
+    const match = text.match(/\[SCHEDULE\]([\s\S]*?)\[\/SCHEDULE\]/);
+    if (!match) return null;
+    const lines = match[1].trim().split('\n').filter(l => l.trim());
+    return lines.map(line => {
+      const parts = line.split('|').map(p => p.trim());
+      return { time: parts[0], icon: parts[1], task: parts[2] };
+    });
+  }
+
+  function renderMessage(content, role) {
+    const schedule = parseSchedule(content);
+    let cleanContent = content.replace(/\[SCHEDULE\][\s\S]*?\[\/SCHEDULE\]/g, '');
+    cleanContent = cleanContent
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>');
+
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = `avatar ${role}`;
+    avatar.textContent = role === 'ai' ? '🧠' : '👤';
+
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${role}`;
+    bubble.innerHTML = cleanContent;
+
+    if (schedule && schedule.length > 0) {
+      const block = document.createElement('div');
+      block.className = 'schedule-block';
+      schedule.forEach(row => {
+        const r = document.createElement('div');
+        r.className = 'schedule-row';
+        r.innerHTML = `
+          <span class="schedule-time">${row.time}</span>
+          <span class="schedule-icon">${row.icon}</span>
+          <span class="schedule-task">${row.task}</span>
+        `;
+        block.appendChild(r);
+      });
+      bubble.appendChild(block);
+    }
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    return div;
+  }
+
+  function addMessage(content, role) {
+    if (welcomeScreen && welcomeScreen.parentNode) welcomeScreen.remove();
+    const el = renderMessage(content, role);
+    chatArea.appendChild(el);
+    setTimeout(() => chatArea.scrollTop = chatArea.scrollHeight, 50);
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'message ai';
+    div.id = 'typing-msg';
+    div.innerHTML = `
+      <div class="avatar ai">🧠</div>
+      <div class="bubble ai">
+        <div class="typing-indicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>`;
+    if (welcomeScreen && welcomeScreen.parentNode) welcomeScreen.remove();
+    chatArea.appendChild(div);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-msg');
+    if (t) t.remove();
+  }
+
+  async function callOpenAI(apiKey, messages) {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+        max_tokens: 900,
+        temperature: 0.65
+      })
+    });
+    if (!res.ok) throw new Error(`API Error: ${res.status}`);
+    const data = await res.json();
+    return data.choices[0].message.content;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  MAIN SEND HANDLER
+  // ═══════════════════════════════════════════════════
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text || isProcessing) return;
+
+    isProcessing = true;
+    sendBtn.disabled = true;
+    userInput.value = '';
+    userInput.style.height = 'auto';
+
+    addMessage(text, 'user');
+    conversationHistory.push({ role: 'user', content: text });
+
+    showTyping();
+
+    const apiKey = document.getElementById('api-key').value.trim();
+
+    try {
+      let response;
+
+      if (apiKey && apiKey.startsWith('sk-')) {
+        // ── OpenAI Mode ──
+        response = await callOpenAI(apiKey, conversationHistory);
+      } else {
+        // ── Demo Mode với State Machine ──
+        await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
+
+        // Kiểm tra off-topic TRƯỚC
+        if (isOffTopic(text)) {
+          response = refuseOffTopic(text);
+        } else {
+          // Nếu chưa bắt đầu thu thập → kích hoạt state machine
+          if (state === STATE.IDLE) {
+            response = processState(text);
+          } else if (state === STATE.DONE) {
+            response = handlePostSchedule(text);
+          } else {
+            response = processState(text);
+          }
+        }
+      }
+
+      removeTyping();
+      conversationHistory.push({ role: 'assistant', content: response });
+      addMessage(response, 'ai');
+
+    } catch (err) {
+      removeTyping();
+      addMessage(`⚠️ **Lỗi kết nối:** ${err.message}\n\nVui lòng kiểm tra API key hoặc xóa để dùng chế độ Demo.`, 'ai');
+    }
+
+    isProcessing = false;
+    sendBtn.disabled = false;
+    userInput.focus();
+  }
+
+  function quickStart(btn) {
+    userInput.value = btn.textContent.trim().replace(/^\S+\s/, '').trim();
+    sendMessage();
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+</script>
+</body>
+</html>
